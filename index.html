@@ -1,40 +1,87 @@
+<head>
+    <style>
+    fieldset {
+        border: none;
+    }
+    fieldset span {
+        display: inline-block;        
+        min-width: 100px;
+    }
+    .long-entry {
+        min-width: 300px;
+        height: 100px;
+    }
+    </style>
+</head>
 <body>
-<div>
-    <a data-bind="bookmark-link">sdf</a>
-</div>
+<h1>bookmarker</h1>
+<section="top">
+    <div>
+        <div id="doc-text"></div>
+        <center><!-- yes, this markup is terrible -->
+        <h2><a id="bookmark-link">sdf</a></h2>
+        </center>
+    </div>
+<section>
 
-<label>title
-    <input data-bind="title"></input>
-</label>
+<hr/>
 
-<label>source
-    <textarea data-bind="src" placeholder="paste here"></textarea>
-</label>
+<section="customize">
+    To make your own bookmarklet, edit below, then copy the URL
+     <!-- this is no worse than Bootstrap -->
+    <fieldset>
+        <label><span>documentation</span>
+            <textarea class="long-entry" id="doc-input"></textarea>
+        </label>
+    </fieldset>
+    
+    <fieldset>
+        <label><span>title</span>
+            <input id="title"></input>
+        </label>
+    </fieldset>
+
+    <fieldset>
+        <label><span>source</span>
+            <textarea id="src" placeholder="paste here"></textarea>
+        </label>
+    </fieldset>
+<section>
+
 
 </body>
 <script>
 {
     'use strict'
-    const findEl = dataBind => document.querySelector(`[data-bind=${dataBind}]`)
+    const findEl = document.getElementById.bind(document)
+    const docTextEl = findEl('doc-text')
+    const docInputEl = findEl('doc-input')
     const linkEl = findEl('bookmark-link')
     const titleEl = findEl('title')
     const srcEl = findEl('src')
-
+    
     let state = {
-        src: 'alert("hi")',
-        title: 'myBookmarklet'
+        src: "document.bgColor='orange'",
+        title: 'orangify',
+        docText: 'Max shared a bookmarklet with you!'
+                 + ' Just drag it to your bookmark bar to install:'
+        
     }
 
     const update = newState => {
         state = Object.assign({}, state, newState)
-        const uri = `?src=${encodeURIComponent(state.src)}&title=${encodeURIComponent(state.title)}`
-        if (uri !== window.history.search) {
-            window.history.pushState({}, null, uri)
-        }
-        srcEl.value = state.src
-        linkEl.href = `javascript:(window=>${state.src})()`
-        linkEl.textContent = state.title
-        titleEl.value = state.title
+        requestAnimationFrame(() => {
+            const uri = `?src=${encodeURIComponent(state.src)}&title=${encodeURIComponent(state.title)}`
+            if (uri !== window.history.search) {
+                window.history.replaceState({}, null, uri)
+            }
+            srcEl.value = state.src
+            linkEl.href = `javascript:void (window=>${state.src})(window)`
+            linkEl.textContent = state.title
+            titleEl.value = state.title
+            docTextEl.textContent = state.docText
+            docInputEl.value = state.docText
+        })
     }
 
     const parseSearch = search =>
@@ -46,15 +93,28 @@
                 .map(x => x.split('='))
                 .reduce((obj, [k, v]) => Object.assign({}, obj, {[k]: decodeURIComponent(v)}), {})
 
+    const bindUpdates = updatePairs => {
+        updatePairs.forEach(([el, stateKey]) => {
+            el.addEventListener('input', e => update({[stateKey]: e.target.value}))
+        })
+    }
 
     const main = () => {
+
+        linkEl.onclick = e => {
+            e.preventDefault()
+            alert('no, silly! drag the link to your bookmark bar')
+        }
 
         // update DOM to match initial state
         const initial = parseSearch(window.location.search)
         update(initial)
-        // update uri on textarea change
-        srcEl.addEventListener('input', e => update({src: e.target.value}))
-        titleEl.addEventListener('input', e => update({title: e.target.value}))
+        // update dom on input or textarea change
+        bindUpdates([
+            [srcEl, 'src'],
+            [titleEl, 'title'],
+            [docInputEl, 'docText']
+        ])
     }
 
     main()
